@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Codavatar InternTrack - Signup</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <img src="img/logo.png" alt="Codavatar Logo" style="height:60px;display:block;margin:0 auto 10px;"/>
+      <h1>Codavatar InternTrack</h1>
+      <h2 class="muted">Sign up</h2>
+
+      <div class="field">
+        <label>Full name</label>
+        <input id="full_name" placeholder="Your name"/>
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@example.com"/>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+
+        <!-- password + show toggle -->
+        <div class="row" style="gap:8px;align-items:center">
+          <input id="password" type="password" placeholder="Min 8 chars, number + special" style="flex:1"/>
+          <button class="secondary" type="button" onclick="togglePw('password')">👁</button>
+        </div>
+
+        <!-- strength meter -->
+        <div class="pw-meter" style="margin-top:10px">
+          <div class="muted small">Password strength</div>
+          <div class="pw-bar-bg" style="height:10px;background:#eee;border-radius:8px;overflow:hidden">
+            <div id="pwBar" class="pw-bar" style="height:10px;width:0%"></div>
+          </div>
+          <div id="pwText" class="muted small" style="margin-top:6px"></div>
+        </div>
+
+        <div class="muted small" style="margin-top:8px">
+          Must be <b>8+ chars</b>, include <b>1 number</b> and <b>1 special character</b>.
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Re-type Password</label>
+        <div class="row" style="gap:8px;align-items:center">
+          <input id="password2" type="password" placeholder="Re-type password" style="flex:1"/>
+          <button class="secondary" type="button" onclick="togglePw('password2')">👁</button>
+        </div>
+        <div id="matchText" class="muted small" style="margin-top:6px"></div>
+      </div>
+
+      <div class="field">
+        <label>Role</label>
+        <select id="role">
+          <option value="intern">Intern</option>
+          <option value="supervisor">Supervisor</option>
+        </select>
+      </div>
+
+      <button id="signupBtn" onclick="doSignup()">Create account</button>
+      <p id="msg" class="muted"></p>
+
+      <div id="afterSignup" style="display:none;margin-top:10px;text-align:center">
+        <button class="secondary" type="button" id="migaduBtn">
+          Open Migadu Webmail
+        </button>
+      </div>
+
+      <p class="muted" style="text-align:center;margin-top:16px">
+        Already have an account? <a href="login.html"><b>Login</b></a>
+      </p>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/signup.js"></script>
+</body>
+</html>

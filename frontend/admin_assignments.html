@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Codavatar InternTrack - Admin Assignments</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">
+      Codavatar InternTrack <span class="badge">Admin</span>
+      <span class="badge" id="who"></span>
+    </div>
+    <div class="row">
+      <button class="secondary" onclick="window.location.href='admin.html'">Dashboard</button>
+      <button class="secondary" onclick="window.location.href='admin_users.html'">Users</button>
+      <button class="secondary" onclick="window.location.href='admin_activity.html'">Activity</button>
+      <button class="secondary" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Assign -->
+    <div class="card">
+      <h2>Assign Intern → Supervisor</h2>
+
+      <div class="field">
+        <label>Supervisor</label>
+        <select id="supervisor_select"></select>
+      </div>
+
+      <div class="field">
+        <label>Intern</label>
+        <select id="intern_select"></select>
+      </div>
+
+      <button onclick="assign()">Assign</button>
+      <p id="msg" class="muted"></p>
+
+      <hr/>
+      <p class="muted small">
+        Intern will see their assigned supervisor on Intern dashboard.
+      </p>
+    </div>
+
+    <!-- Current assignments -->
+    <div class="card">
+      <h2>Current Assignments</h2>
+
+      <div class="row">
+        <div class="field" style="flex:1;min-width:220px">
+          <label>Search</label>
+          <input id="q" placeholder="intern/supervisor name, email, id..." oninput="debouncedLoad()"/>
+        </div>
+
+        <div class="field" style="width:160px">
+          <label>Sort</label>
+          <select id="sort" onchange="loadAssignments()">
+            <option value="new">Newest</option>
+            <option value="old">Oldest</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="list" class="muted">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+const me = requireAuth();
+document.getElementById("who").textContent = `${me.email} | ${me.staff_id || ""}`;
+
+let _t = null;
+function debouncedLoad(){
+  clearTimeout(_t);
+  _t = setTimeout(loadAssignments, 250);
+}
+
+function safe(s){
+  return (s ?? "").toString().replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+}
+
+async function loadUsersForDropdowns(){
+  const supSel = document.getElementById("supervisor_select");
+  const intSel = document.getElementById("intern_select");
+
+  supSel.innerHTML = `<option>Loading...</option>`;
+  intSel.innerHTML = `<option>Loading...</option>`;
+
+  // ✅ fixed: now returns ALL users + role
+  const res = await apiFetch(`${ACCOUNTS_API}/admin/users/`);
+  const users = await res.json().catch(()=>[]);
+
+  if(!res.ok){
+    supSel.innerHTML = `<option value="">Error</option>`;
+    intSel.innerHTML = `<option value="">Error</option>`;
+    alert(users.detail || "Failed to load users.");
+    return;
+  }
+
+  const supervisors = users.filter(u => u.role === "supervisor");
+  const interns = users.filter(u => u.role === "intern");
+
+  supSel.innerHTML = supervisors.length
+    ? supervisors.map(s => `<option value="${s.id}">${safe(s.full_name)} (${safe(s.staff_id || "")})</option>`).join("")
+    : `<option value="">No supervisors</option>`;
+
+  intSel.innerHTML = interns.length
+    ? interns.map(i => `<option value="${i.id}">${safe(i.full_name)} (${safe(i.staff_id || "")})</option>`).join("")
+    : `<option value="">No interns</option>`;
+}
+
+async function assign(){
+  const msg = document.getElementById("msg");
+  msg.textContent = "Assigning...";
+
+  const supervisor_id = parseInt(document.getElementById("supervisor_select").value, 10);
+  const intern_id = parseInt(document.getElementById("intern_select").value, 10);
+
+  if(!supervisor_id || !intern_id){
+    msg.textContent = "Select both supervisor and intern.";
+    return;
+  }
+
+  // ✅ accounts endpoint expects intern_id + supervisor_id
+  const res = await apiFetch(`${ACCOUNTS_API}/admin/assign-intern/`, {
+    method: "POST",
+    body: JSON.stringify({ supervisor_id, intern_id })
+  });
+
+  const data = await res.json().catch(()=>({}));
+  msg.textContent = res.ok ? "✅ Assigned successfully" : (data.detail || "Failed to assign");
+  if(res.ok) loadAssignments();
+}
+
+async function unassign(linkId){
+  if(!confirm("Unassign this intern from supervisor?")) return;
+
+  // ✅ internships endpoint
+  const res = await apiFetch(`${API_BASE}/admin/unassign/`, {
+    method: "POST",
+    body: JSON.stringify({ link_id: linkId })
+  });
+
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) return alert(data.detail || "Failed to unassign");
+
+  loadAssignments();
+}
+
+async function loadAssignments(){
+  const q = document.getElementById("q").value.trim();
+  const sort = document.getElementById("sort").value;
+
+  // ✅ internships endpoint
+  const res = await apiFetch(`${API_BASE}/admin/assignments/?q=${encodeURIComponent(q)}`);
+  const data = await res.json().catch(()=>[]);
+  const box = document.getElementById("list");
+
+  if(!res.ok){
+    box.textContent = "Failed to load assignments.";
+    return;
+  }
+  if(!data.length){
+    box.textContent = "No assignments yet.";
+    return;
+  }
+
+  data.sort((a,b)=>{
+    const A = new Date(a.created_at).getTime();
+    const B = new Date(b.created_at).getTime();
+    return sort === "old" ? (A-B) : (B-A);
+  });
+
+  box.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Intern</th>
+          <th>Supervisor</th>
+          <th>Mapped At</th>
+          <th style="width:110px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.map(x=>`
+          <tr>
+            <td>
+              <b>${safe(x.intern.full_name)}</b>
+              <div class="muted small">${safe(x.intern.email)}</div>
+              <div class="small">Intern ID: <b>${safe(x.intern.staff_id||"")}</b></div>
+            </td>
+            <td>
+              <b>${safe(x.supervisor.full_name)}</b>
+              <div class="muted small">${safe(x.supervisor.email)}</div>
+              <div class="small">Supervisor ID: <b>${safe(x.supervisor.staff_id||"")}</b></div>
+            </td>
+            <td class="small">${new Date(x.created_at).toLocaleString()}</td>
+            <td>
+              <button class="secondary" onclick="unassign(${x.id})">Unassign</button>
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+loadUsersForDropdowns();
+loadAssignments();
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Email Verification - Codavatar InternTrack</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div class="auth-container">
+  <div class="auth-card" style="text-align:center">
+    <img src="img/logo.png" alt="Codavatar Logo" style="height:60px;margin-bottom:12px"/>
+
+    <h1>Codavatar InternTrack</h1>
+    <h2 class="muted">Email Verification</h2>
+
+    <p id="msg" class="muted" style="margin-top:20px">
+      Verifying your email…
+    </p>
+
+    <div id="actions" style="display:none;margin-top:18px">
+      <button onclick="goLogin()">Go to Login</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+
+<script>
+  async function verifyEmail(){
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const msg = document.getElementById("msg");
+    const actions = document.getElementById("actions");
+
+    if(!token){
+      msg.textContent = "❌ Invalid verification link.";
+      return;
+    }
+
+    try{
+      const res = await fetch(`${ACCOUNTS_API}/verify-email/`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ token })
+      });
+
+      const data = await res.json().catch(()=>({}));
+
+      if(!res.ok){
+        msg.textContent = data.detail || "❌ Verification failed.";
+        actions.style.display = "block";
+        return;
+      }
+
+      msg.textContent = "✅ Email verified successfully!";
+      actions.style.display = "block";
+
+      // ⏳ auto redirect to login
+      setTimeout(() => {
+        window.location.href = "login.html";
+      }, 2000);
+
+    }catch(err){
+      msg.textContent = "❌ Network error. Try again.";
+      actions.style.display = "block";
+    }
+  }
+
+  function goLogin(){
+    window.location.href = "login.html";
+  }
+
+  verifyEmail();
+</script>
+
+</body>
+</html>
