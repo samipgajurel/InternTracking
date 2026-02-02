@@ -152,7 +152,14 @@ SESSION_ENGINE = "django.contrib.sessions.backends.db"
 # Example: FRONTEND_URL=https://your-site.netlify.app
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:5500").strip()
 
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "https://codavatarinterntracking.netlify.app",
+]
+CSRF_TRUSTED_ORIGINS = [
+    "https://codavatarinterntracking.netlify.app",
+]
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [

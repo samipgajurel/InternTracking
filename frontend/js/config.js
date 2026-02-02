@@ -2,11 +2,6 @@
 
 const API_BASE = "https://codavatarinterntracking-api.onrender.com/api";
 
-// Auth & accounts
-const ACCOUNTS_API = `${API_BASE}/accounts`;
-
-// Internships module (tasks, supervisors, interns, etc.)
-const INTERNSHIPS_API = API_BASE;
-
-// Attendance
-const ATTENDANCE_API = `${API_BASE}/attendance`;
+const ACCOUNTS_API = `${API_BASE}/accounts`;      // /api/accounts/...
+const INTERNSHIPS_API = `${API_BASE}`;            // /api/...
+const ATTENDANCE_API = `${API_BASE}/attendance`;  // /api/attendance/...
