@@ -1,8 +1,8 @@
-Django==5.2.10
-djangorestframework
-djangorestframework-simplejwt
-django-cors-headers
-python-dotenv
 gunicorn
 whitenoise
-psycopg2-binary
+python-dotenv
+pymysql
+cryptography
+django-cors-headers
+djangorestframework
+djangorestframework-simplejwt
