@@ -1,9 +1,15 @@
 import os
-from waitress import serve
+import sys
+from django.core.management import execute_from_command_line
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "CodavatarInternTracking.settings")
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    "CodavatarInternTracking.settings"
+)
 
-from django.core.wsgi import get_wsgi_application
-application = get_wsgi_application()
-
-serve(application, host="0.0.0.0", port=8000)
+if __name__ == "__main__":
+    execute_from_command_line([
+        "manage.py",
+        "runserver",
+        "0.0.0.0:8000"
+    ])

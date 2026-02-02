@@ -12,10 +12,20 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 
-ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
-    if h.strip()
+# Comma separated hosts in .env
+ALLOWED_HOSTS = [h.strip() for h in os.getenv(
+    "DJANGO_ALLOWED_HOSTS",
+    "127.0.0.1,localhost"
+).split(",") if h.strip()]
+
+# Helpful defaults for deployment (safe even if unused)
+# Add these to .env later for Render/Railway
+# e.g. DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,interntrack.onrender.com
+ALLOWED_HOSTS += [
+    ".onrender.com",
+    ".up.railway.app",
+    ".trycloudflare.com",
+    ".ngrok-free.app",
 ]
 
 # =========================
@@ -45,7 +55,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
 
-    # ✅ Static in production (works on Render/Railway)
+    # ✅ WhiteNoise MUST be right after SecurityMiddleware
     "whitenoise.middleware.WhiteNoiseMiddleware",
 
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -55,10 +65,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-
 
 ROOT_URLCONF = "CodavatarInternTracking.urls"
 
@@ -81,7 +87,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "CodavatarInternTracking.wsgi.application"
 
 # =========================
-# ✅ MySQL via PyMySQL (NO mysqlclient)
+# ✅ MySQL via PyMySQL
 # =========================
 # IMPORTANT:
 # pip install pymysql cryptography
@@ -89,22 +95,17 @@ try:
     import pymysql
     pymysql.install_as_MySQLdb()
 except Exception:
-    # If not installed yet, Django will show a clear error.
     pass
-
-DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.mysql")
 
 DATABASES = {
     "default": {
-        "ENGINE": DB_ENGINE,
+        "ENGINE": "django.db.backends.mysql",
         "NAME": os.getenv("DB_NAME", "codavatar_interntrack"),
         "USER": os.getenv("DB_USER", "django"),
-        "PASSWORD": os.getenv("DB_PASSWORD", ""),   # ✅ must exist in .env
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", "127.0.0.1"),
         "PORT": os.getenv("DB_PORT", "3306"),
-        "OPTIONS": {
-            "charset": "utf8mb4",
-        },
+        "OPTIONS": {"charset": "utf8mb4"},
     }
 }
 
@@ -126,12 +127,11 @@ USE_I18N = True
 USE_TZ = True
 
 # =========================
-# Static files
+# Static files (Render/Railway friendly)
 # =========================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# WhiteNoise compression (good for hosting)
 STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -141,32 +141,32 @@ STORAGES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # =========================
-# ✅ Sessions (admin)
+# Sessions (fix admin session)
 # =========================
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
 # =========================
-# ✅ CORS + CSRF
+# ✅ CORS + CSRF (Frontend hosting)
 # =========================
-# Keep local dev allowed
-# Later you will add GitHub Pages / Netlify URL here
-CORS_ALLOW_ALL_ORIGINS = False
+# Set FRONTEND_URL in .env later when Netlify is ready
+# Example: FRONTEND_URL=https://your-site.netlify.app
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:5500").strip()
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:5500")
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_CREDENTIALS = True
+
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
-    FRONTEND_URL,
 ]
+if FRONTEND_URL and FRONTEND_URL not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append(FRONTEND_URL)
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://127.0.0.1:5500",
-    "http://localhost:5500",
-    FRONTEND_URL,
-]
-
-# If you ever use cookies/session cross-site:
-CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = []
+# CSRF requires full scheme (http/https) - add only if valid
+for url in CORS_ALLOWED_ORIGINS:
+    if url.startswith("http://") or url.startswith("https://"):
+        CSRF_TRUSTED_ORIGINS.append(url)
 
 # =========================
 # ✅ DRF + JWT
@@ -202,5 +202,5 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@codavatar.tech")
 
-# Frontend base URL (password reset links)
-FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://127.0.0.1:5500/frontend")
+# Used for reset links
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", FRONTEND_URL)
