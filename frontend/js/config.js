@@ -1,5 +1,6 @@
 // frontend/js/config.js
-const API_BASE = "http://127.0.0.1:8000/api";
-const ACCOUNTS_API = `${API_BASE}/accounts`;   // /api/accounts/...
-const INTERNSHIPS_API = `${API_BASE}`;         // internships live directly under /api/...
-const Attendance_API = `${API_BASE}/attendance`; // /api/attendance/...
+const API_BASE = "https://codavatarinterntracking-api.onrender.com/api";
+
+const ACCOUNTS_API = `${API_BASE}/accounts`;
+const INTERNSHIPS_API = `${API_BASE}`;
+const ATTENDANCE_API = `${API_BASE}/attendance`;
