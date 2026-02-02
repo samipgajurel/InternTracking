@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Login - InternTrack</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div class="auth-container">
+  <div class="auth-card" style="max-width:560px;">
+      <img src="img/logo.png" alt="Codavatar Logo" style="height:60px;display:block;margin:0 auto 10px;"/>
+    <h1>Codavatar InternTrack</h1>
+    <h2 class="muted">Login</h2>
+
+    <!-- LOGIN -->
+    <div id="loginBox">
+      <div class="field">
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@example.com"/>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="row" style="gap:8px;align-items:center">
+          <input id="password" type="password" placeholder="Password" style="flex:1"/>
+          <button class="secondary" type="button" onclick="togglePw()">👁</button>
+        </div>
+      </div>
+
+      <button onclick="doLogin()">Login</button>
+      <p id="msg" class="muted"></p>
+
+      <p class="muted small" style="margin-top:12px">
+        <a href="javascript:void(0)" onclick="showForgot()">Forgot password?</a>
+      </p>
+    </div>
+
+    <!-- FORGOT PASSWORD -->
+    <div id="forgotBox" style="display:none">
+      <h3 style="margin-top:0">Forgot Password</h3>
+      <p class="muted small">Enter your email to receive a reset link.</p>
+
+      <div class="field">
+        <label>Email</label>
+        <input id="forgot_email" type="email" placeholder="you@example.com"/>
+      </div>
+
+      <button onclick="sendReset()">Send reset link</button>
+      <p id="forgot_msg" class="muted"></p>
+
+      <p class="muted small" style="margin-top:12px">
+        <a href="javascript:void(0)" onclick="showLogin()">Back to login</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/login.js"></script>
+</body>
+</html>

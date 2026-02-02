@@ -1,0 +1,414 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Codavatar InternTrack - Intern</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">
+       <img src="img/logo.png" alt="Codavatar Logo" style="height:60px;display:block;margin:0 auto 10px;"/>
+      Codavatar InternTrack <span class="badge">Intern</span>
+      <span class="badge" id="who"></span>
+    </div>
+    <div class="row">
+      <button class="secondary" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="card" style="margin-top:14px">
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="secondary" id="tab_tasks" onclick="showTab('tasks')">Tasks</button>
+      <button class="secondary" id="tab_attendance" onclick="showTab('attendance')">Attendance</button>
+      <button class="secondary" id="tab_reports" onclick="showTab('reports')">Reports</button>
+      <!-- ✅ NEW -->
+      <button class="secondary" id="tab_feedback" onclick="showTab('feedback')">Progress & Feedback</button>
+    </div>
+  </div>
+
+  <!-- TASKS -->
+  <div id="panel_tasks" class="grid" style="margin-top:14px; display:none;">
+    <div class="card">
+      <h2>My Tasks</h2>
+      <div id="tasksBox" class="muted">Loading...</div>
+    </div>
+  </div>
+
+  <!-- ATTENDANCE -->
+  <div id="panel_attendance" class="grid" style="margin-top:14px; display:none;">
+    <div class="card">
+      <h2>Mark Attendance</h2>
+
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="min-width:200px">
+          <label>Status</label>
+          <select id="att_status">
+            <option value="present">Present</option>
+            <option value="absent">Absent</option>
+            <option value="leave">Leave</option>
+          </select>
+        </div>
+
+        <div class="field" style="flex:1;min-width:240px">
+          <label>Note (optional)</label>
+          <input id="att_note" placeholder="Reason / note..." />
+        </div>
+
+        <button onclick="markAttendance()">Save</button>
+      </div>
+
+      <p id="att_msg" class="muted small" style="margin-top:10px"></p>
+      <hr/>
+      <h3 style="margin-top:10px">My Attendance History</h3>
+      <div id="attendanceBox" class="muted">Loading...</div>
+    </div>
+  </div>
+
+  <!-- REPORTS -->
+  <div id="panel_reports" class="grid" style="margin-top:14px; display:none;">
+    <div class="card">
+      <h2>Monthly Reports</h2>
+
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="min-width:160px">
+          <label>Month (YYYY-MM)</label>
+          <input id="rep_month" placeholder="2026-01" />
+        </div>
+        <div class="field" style="flex:1;min-width:240px">
+          <label>Summary</label>
+          <input id="rep_summary" placeholder="What did you do this month?" />
+        </div>
+        <button onclick="createReport()">Save</button>
+      </div>
+
+      <p id="rep_msg" class="muted small" style="margin-top:10px"></p>
+
+      <hr/>
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="min-width:160px">
+          <label>Export Month (optional)</label>
+          <input id="exp_month" placeholder="2026-01" />
+        </div>
+        <button class="secondary" onclick="exportCSV()">Export CSV</button>
+        <button class="secondary" onclick="exportPDF()">Export PDF</button>
+      </div>
+
+      <hr/>
+      <h3 style="margin-top:10px">My Reports</h3>
+      <div id="reportsBox" class="muted">Loading...</div>
+    </div>
+  </div>
+
+  <!-- ✅ NEW: PROGRESS + FEEDBACK -->
+  <div id="panel_feedback" class="grid" style="margin-top:14px; display:none;">
+    <div class="card">
+      <h2>Progress & Feedback</h2>
+
+      <div id="supBox" class="muted">Loading...</div>
+
+      <hr/>
+      <h3 style="margin-top:10px">Your Rating</h3>
+      <div id="ratingBox" class="muted small">Loading...</div>
+
+      <h3 style="margin-top:14px">Supervisor Feedback</h3>
+      <div id="fbBox" class="muted">Loading...</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+const me = requireAuth();
+document.getElementById("who").textContent = `${me.email} | ${me.staff_id || ""}`;
+
+/* ---------------- Tabs ---------------- */
+const TABS = ["tasks","attendance","reports","feedback"];
+function showTab(name){
+  for(const t of TABS){
+    document.getElementById("panel_"+t).style.display = (t===name) ? "" : "none";
+    const btn = document.getElementById("tab_"+t);
+    if(btn) btn.classList.toggle("primary", t===name);
+  }
+  // load on open (fast, simple)
+  if(name==="tasks") loadTasks();
+  if(name==="attendance") { loadAttendance(); }
+  if(name==="reports") loadReports();
+  if(name==="feedback") loadSupervisorFeedback();
+}
+
+/* ---------------- Utils ---------------- */
+function safe(s){
+  return (s ?? "").toString().replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+}
+
+/* ---------------- TASKS ---------------- */
+async function loadTasks(){
+  const box = document.getElementById("tasksBox");
+  box.textContent = "Loading...";
+
+  const res = await apiFetch(`${API_BASE}/intern/tasks/`);
+  const data = await res.json().catch(()=>[]);
+
+  if(!res.ok){
+    box.textContent = "Failed to load tasks.";
+    return;
+  }
+  if(!data.length){
+    box.textContent = "No tasks assigned yet.";
+    return;
+  }
+
+  box.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Status</th>
+          <th>Due</th>
+          <th style="width:160px">Update</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.map(t=>`
+          <tr>
+            <td>
+              <b>${safe(t.title)}</b>
+              <div class="muted small">${safe(t.description||"")}</div>
+            </td>
+            <td><span class="badge">${safe(t.status)}</span></td>
+            <td class="small">${t.due_date ? safe(t.due_date) : "-"}</td>
+            <td>
+              <select id="task_${t.id}" style="width:100%">
+                <option value="pending" ${t.status==="pending"?"selected":""}>pending</option>
+                <option value="in_progress" ${t.status==="in_progress"?"selected":""}>in_progress</option>
+                <option value="done" ${t.status==="done"?"selected":""}>done</option>
+              </select>
+              <button class="secondary" style="margin-top:6px;width:100%" onclick="updateTask(${t.id})">Save</button>
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+async function updateTask(id){
+  const status = document.getElementById(`task_${id}`).value;
+
+  const res = await apiFetch(`${API_BASE}/intern/tasks/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ status })
+  });
+  const data = await res.json().catch(()=>({}));
+
+  if(!res.ok){
+    alert(data.detail || "Failed to update task");
+    return;
+  }
+  loadTasks();
+}
+
+/* ---------------- ATTENDANCE (✅ FIXED PAYLOAD) ---------------- */
+async function markAttendance(){
+  const msg = document.getElementById("att_msg");
+  msg.textContent = "Saving...";
+
+  const status = document.getElementById("att_status").value;
+  const note = document.getElementById("att_note").value.trim();
+
+  // ✅ IMPORTANT: backend now defaults date=today, so DO NOT send date unless you want custom day
+  const res = await apiFetch(`${API_BASE}/attendance/my/`, {
+    method: "POST",
+    body: JSON.stringify({ status, note })
+  });
+
+  const data = await res.json().catch(()=>({}));
+
+  if(!res.ok){
+    msg.textContent = data.detail || "Failed to mark attendance.";
+    return;
+  }
+
+  msg.textContent = `✅ Saved: ${data.date} (${data.status})`;
+  document.getElementById("att_note").value = "";
+  loadAttendance();
+}
+
+async function loadAttendance(){
+  const box = document.getElementById("attendanceBox");
+  box.textContent = "Loading...";
+
+  const res = await apiFetch(`${API_BASE}/attendance/my/`);
+  const data = await res.json().catch(()=>[]);
+
+  if(!res.ok){
+    box.textContent = "Failed to load attendance.";
+    return;
+  }
+  if(!data.length){
+    box.textContent = "No attendance records yet.";
+    return;
+  }
+
+  box.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr><th>Date</th><th>Status</th><th>Note</th></tr>
+      </thead>
+      <tbody>
+        ${data.map(a=>`
+          <tr>
+            <td class="small">${safe(a.date)}</td>
+            <td><span class="badge">${safe(a.status)}</span></td>
+            <td class="small">${safe(a.note||"")}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+/* ---------------- REPORTS ---------------- */
+async function createReport(){
+  const msg = document.getElementById("rep_msg");
+  msg.textContent = "Saving...";
+
+  const month = document.getElementById("rep_month").value.trim();
+  const summary = document.getElementById("rep_summary").value.trim();
+
+  if(!month || month.length !== 7){
+    msg.textContent = "Month must be YYYY-MM";
+    return;
+  }
+  if(!summary){
+    msg.textContent = "Summary required.";
+    return;
+  }
+
+  const res = await apiFetch(`${API_BASE}/reports/my/`, {
+    method: "POST",
+    body: JSON.stringify({ month, summary })
+  });
+
+  const data = await res.json().catch(()=>({}));
+  msg.textContent = res.ok ? "✅ Report saved" : (data.detail || "Failed");
+  if(res.ok){
+    document.getElementById("rep_summary").value = "";
+    loadReports();
+  }
+}
+
+async function loadReports(){
+  const box = document.getElementById("reportsBox");
+  box.textContent = "Loading...";
+
+  const res = await apiFetch(`${API_BASE}/reports/my/`);
+  const data = await res.json().catch(()=>[]);
+
+  if(!res.ok){
+    box.textContent = "Failed to load reports.";
+    return;
+  }
+  if(!data.length){
+    box.textContent = "No reports yet.";
+    return;
+  }
+
+  box.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr><th>Month</th><th>Summary</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+        ${data.map(r=>`
+          <tr>
+            <td><b>${safe(r.month)}</b></td>
+            <td class="small">${safe(r.summary||"")}</td>
+            <td class="small">${r.created_at ? new Date(r.created_at).toLocaleString() : "-"}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function exportCSV(){
+  const m = document.getElementById("exp_month").value.trim();
+  const url = `${API_BASE}/reports/export/csv/${m ? `?month=${encodeURIComponent(m)}` : ""}`;
+  window.open(url, "_blank");
+}
+function exportPDF(){
+  const m = document.getElementById("exp_month").value.trim();
+  const url = `${API_BASE}/reports/export/pdf/${m ? `?month=${encodeURIComponent(m)}` : ""}`;
+  window.open(url, "_blank");
+}
+
+/* ---------------- ✅ PROGRESS + FEEDBACK ---------------- */
+function stars(n){
+  n = Number(n || 0);
+  let s = "";
+  for(let i=0;i<5;i++) s += (i < n) ? "★" : "☆";
+  return s;
+}
+
+async function loadSupervisorFeedback(){
+  const supBox = document.getElementById("supBox");
+  const ratingBox = document.getElementById("ratingBox");
+  const fbBox = document.getElementById("fbBox");
+
+  supBox.textContent = "Loading...";
+  ratingBox.textContent = "Loading...";
+  fbBox.textContent = "Loading...";
+
+  const res = await apiFetch(`${API_BASE}/intern/my-supervisor/`);
+  const data = await res.json().catch(()=>({}));
+
+  if(!res.ok){
+    supBox.textContent = "Failed to load supervisor info.";
+    ratingBox.textContent = "";
+    fbBox.textContent = "";
+    return;
+  }
+
+  if(!data.assigned){
+    supBox.innerHTML = `<div class="muted">${safe(data.detail || "No supervisor assigned yet.")}</div>`;
+    ratingBox.textContent = "-";
+    fbBox.textContent = "-";
+    return;
+  }
+
+  const s = data.supervisor || {};
+  supBox.innerHTML = `
+    <div><b>${safe(s.full_name || "")}</b></div>
+    <div class="muted small">${safe(s.email || "")}</div>
+    <div class="small">Supervisor ID: <b>${safe(s.staff_id || "-")}</b></div>
+  `;
+
+  const rating = Number(data.progress_rating || 0);
+  ratingBox.innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div class="small">Rating:</div>
+      <div style="font-size:18px;letter-spacing:2px">${stars(rating)}</div>
+    </div>
+    <div class="muted small" style="margin-top:6px">(${rating}/5)</div>
+  `;
+
+  const feedback = (data.feedback || "").trim();
+  fbBox.innerHTML = feedback
+    ? `<div class="small">${safe(feedback)}</div>`
+    : `<div class="muted">No feedback yet.</div>`;
+}
+
+/* Default tab */
+showTab("tasks");
+</script>
+</body>
+</html>
