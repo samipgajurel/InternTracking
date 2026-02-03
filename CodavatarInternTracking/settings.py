@@ -26,6 +26,7 @@ ALLOWED_HOSTS += [
     ".up.railway.app",
     ".trycloudflare.com",
     ".ngrok-free.app",
+    "codavatarinterntracking-api.onrender.com"
 ]
 
 # =========================

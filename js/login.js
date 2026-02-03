@@ -1,59 +1,44 @@
-const emailEl = document.getElementById("email");
-const passwordEl = document.getElementById("password");
+// frontend/js/login.js
 
-/* ---------------- SHOW / HIDE PASSWORD ---------------- */
 function togglePw() {
-  passwordEl.type = passwordEl.type === "password" ? "text" : "password";
+  const p = document.getElementById("password");
+  p.type = p.type === "password" ? "text" : "password";
 }
 
-/* ---------------- LOGIN ---------------- */
 async function doLogin() {
+  const email = document.getElementById("email").value.trim().toLowerCase();
+  const password = document.getElementById("password").value;
   const msg = document.getElementById("msg");
-  msg.textContent = "Logging in...";
+  msg.textContent = "";
 
-  try {
-    const user = await login(emailEl.value, passwordEl.value);
-    goToDashboardByRole(user);
-  } catch (err) {
-    msg.textContent = err.message || "Login failed";
-  }
-}
-
-/* ---------------- FORGOT PASSWORD UI ---------------- */
-function showForgot() {
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("forgotBox").style.display = "block";
-}
-
-function showLogin() {
-  document.getElementById("forgotBox").style.display = "none";
-  document.getElementById("loginBox").style.display = "block";
-}
-
-/* ---------------- SEND RESET ---------------- */
-async function sendReset() {
-  const email = document.getElementById("forgot_email").value.trim();
-  const box = document.getElementById("forgot_msg");
-
-  if (!email) {
-    box.textContent = "Email required";
+  if (!email || !password) {
+    msg.textContent = "Email and password required.";
     return;
   }
 
-  box.textContent = "Sending reset link...";
-
   try {
-    const res = await fetch(`${ACCOUNTS_API}/forgot-password/`, {
+    const data = await apiFetch(`${ACCOUNTS_API}/login/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email, password }),
     });
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.detail || "Failed");
+    // Your backend might return tokens OR user. Handle both.
+    if (data.access && data.refresh) {
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
+    }
 
-    box.textContent = "✅ Reset link sent. Check your email.";
-  } catch (e) {
-    box.textContent = e.message;
+    // If backend returns user object, store it
+    if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
+
+    // If backend doesn't return user, call /me/
+    if (!data.user && localStorage.getItem("access")) {
+      const me = await apiFetch(`${ACCOUNTS_API}/me/`, { method: "GET" });
+      localStorage.setItem("user", JSON.stringify(me));
+    }
+
+    window.location.href = "dashboard.html";
+  } catch (err) {
+    msg.textContent = err.message || "Login failed";
   }
 }

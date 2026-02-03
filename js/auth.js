@@ -1,11 +1,8 @@
-// js/auth.js
-function setUser(user) {
-  localStorage.setItem("user", JSON.stringify(user));
-}
+// frontend/js/auth.js
 
-function getUser() {
-  const u = localStorage.getItem("user");
-  return u ? JSON.parse(u) : null;
+function saveTokens(access, refresh) {
+  localStorage.setItem("access", access);
+  localStorage.setItem("refresh", refresh);
 }
 
 function logout() {
@@ -15,50 +12,20 @@ function logout() {
   window.location.href = "login.html";
 }
 
-async function login(email, password) {
-  const res = await fetch(`${ACCOUNTS_API}/login/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: (email || "").trim().toLowerCase(),
-      password: password || "",
-    }),
-  });
+// Optional: refresh token function (not required just to login)
+async function refreshToken() {
+  const refresh = localStorage.getItem("refresh");
+  if (!refresh) return null;
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || "Invalid credentials");
-
-  localStorage.setItem("access", data.access);
-  localStorage.setItem("refresh", data.refresh);
-  setUser(data.user);
-  return data.user;
-}
-
-function requireAuth() {
-  const user = getUser();
-  if (!user) {
-    window.location.href = "login.html";
+  try {
+    const data = await apiFetch(JWT_REFRESH_API, {
+      method: "POST",
+      body: JSON.stringify({ refresh }),
+    });
+    if (data.access) localStorage.setItem("access", data.access);
+    return data.access || null;
+  } catch (e) {
+    logout();
     return null;
   }
-  return user;
-}
-
-function requireRole(roles = []) {
-  const user = requireAuth();
-  if (!user) return null;
-
-  if (roles.length && !roles.includes(user.role)) {
-    // ✅ redirect to correct page instead of just failing with 403
-    goToDashboardByRole(user);
-    return null;
-  }
-  return user;
-}
-
-function goToDashboardByRole(user) {
-  if (!user) return logout();
-
-  if (user.role === "admin") window.location.href = "admin.html";
-  else if (user.role === "supervisor") window.location.href = "supervisor.html";
-  else window.location.href = "intern.html";
 }

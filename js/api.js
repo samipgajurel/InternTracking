@@ -1,55 +1,49 @@
-// js/api.js
-function getTokens() {
-  return {
-    access: localStorage.getItem("access"),
-    refresh: localStorage.getItem("refresh"),
-  };
-}
-
-function setTokens({ access, refresh }) {
-  if (access) localStorage.setItem("access", access);
-  if (refresh) localStorage.setItem("refresh", refresh);
-}
-
-async function refreshAccessToken() {
-  const { refresh } = getTokens();
-  if (!refresh) return null;
-
-  const res = await fetch(`${API_BASE}/token/refresh/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.access) return null;
-
-  setTokens({ access: data.access }); // refresh token usually unchanged
-  return data.access;
-}
+// frontend/js/api.js
 
 async function apiFetch(url, options = {}) {
-  const { access } = getTokens();
-
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {}),
-    ...(access ? { Authorization: `Bearer ${access}` } : {}),
   };
 
-  let res = await fetch(url, { ...options, headers });
+  // If you use JWT token, attach it automatically
+  const access = localStorage.getItem("access");
+  if (access) headers["Authorization"] = `Bearer ${access}`;
 
-  // ✅ if expired, refresh once and retry once
-  if (res.status === 401) {
-    const newAccess = await refreshAccessToken();
-    if (!newAccess) return res;
+  try {
+    const res = await fetch(url, {
+      mode: "cors",
+      credentials: "omit", // IMPORTANT: you're using JWT, not cookies
+      ...options,
+      headers,
+    });
 
-    const headers2 = {
-      ...headers,
-      Authorization: `Bearer ${newAccess}`,
-    };
-    res = await fetch(url, { ...options, headers: headers2 });
+    // Try to parse JSON safely
+    const text = await res.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+
+    if (!res.ok) {
+      // Make backend errors readable
+      const msg =
+        data.detail ||
+        data.message ||
+        (typeof data === "string" ? data : null) ||
+        `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+
+    return data;
+  } catch (err) {
+    // This is the exact place where "Failed to fetch" happens
+    console.error("apiFetch error:", err);
+
+    // Friendly message
+    if (String(err).includes("Failed to fetch")) {
+      throw new Error(
+        "Failed to fetch. Check: (1) API URL correct, (2) Render backend is live, (3) CORS allows Netlify."
+      );
+    }
+    throw err;
   }
-
-  return res;
 }
