@@ -1,7 +1,5 @@
-// frontend/js/config.js
+const API_BASE = "https://interntracking-1.onrender.com/api";
 
-const API_BASE = "https://codavatarinterntracking-api.onrender.com/api";
-
-const ACCOUNTS_API = `${API_BASE}/accounts`;      // /api/accounts/...
-const INTERNSHIPS_API = `${API_BASE}`;            // /api/...
-const ATTENDANCE_API = `${API_BASE}/attendance`;  // /api/attendance/...
+const ACCOUNTS_API = `${API_BASE}/accounts`;
+const INTERNSHIPS_API = `${API_BASE}`;
+const ATTENDANCE_API = `${API_BASE}/attendance`;
