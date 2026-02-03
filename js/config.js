@@ -1,3 +1,4 @@
+// frontend/js/config.js
 const API_BASE = "https://interntracking-1.onrender.com/api";
 
 const ACCOUNTS_API = `${API_BASE}/accounts`;

@@ -1,8 +1,9 @@
-gunicorn
-whitenoise
-python-dotenv
-pymysql
-cryptography
-django-cors-headers
-djangorestframework
-djangorestframework-simplejwt
+Django==6.0.1
+djangorestframework==3.16.1
+django-cors-headers==4.9.0
+djangorestframework-simplejwt==5.5.1
+python-dotenv==1.2.1
+whitenoise==6.11.0
+gunicorn==25.0.1
+
+mysqlclient>=2.2.1
